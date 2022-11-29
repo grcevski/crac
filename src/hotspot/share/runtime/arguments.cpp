@@ -109,6 +109,7 @@ SystemProperty *Arguments::_sun_boot_library_path = NULL;
 SystemProperty *Arguments::_java_library_path = NULL;
 SystemProperty *Arguments::_java_home = NULL;
 SystemProperty *Arguments::_java_class_path = NULL;
+SystemProperty *Arguments::_java_module_path = NULL;
 SystemProperty *Arguments::_jdk_boot_class_path_append = NULL;
 SystemProperty *Arguments::_vm_info = NULL;
 
@@ -404,6 +405,7 @@ void Arguments::init_system_properties() {
   _java_library_path = new SystemProperty("java.library.path", NULL,  true);
   _java_home =  new SystemProperty("java.home", NULL,  true);
   _java_class_path = new SystemProperty("java.class.path", "",  true);
+  _java_module_path = new SystemProperty("jdk.module.path", "",  true);
   // jdk.boot.class.path.append is a non-writeable, internal property.
   // It can only be set by either:
   //    - -Xbootclasspath/a:
@@ -415,6 +417,7 @@ void Arguments::init_system_properties() {
   PropertyList_add(&_system_properties, _java_library_path);
   PropertyList_add(&_system_properties, _java_home);
   PropertyList_add(&_system_properties, _java_class_path);
+  PropertyList_add(&_system_properties, _java_module_path);
   PropertyList_add(&_system_properties, _jdk_boot_class_path_append);
   PropertyList_add(&_system_properties, _vm_info);
 

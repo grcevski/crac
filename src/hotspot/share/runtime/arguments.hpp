@@ -284,6 +284,7 @@ class Arguments : AllStatic {
   static SystemProperty *_java_class_path;
   static SystemProperty *_jdk_boot_class_path_append;
   static SystemProperty *_vm_info;
+  static SystemProperty *_java_module_path;
 
   // --patch-module=module=<file>(<pathsep><file>)*
   // Each element contains the associated module name, path
@@ -613,6 +614,7 @@ class Arguments : AllStatic {
   static char* get_dll_dir()      { return _sun_boot_library_path->value(); }
   static char* get_ext_dirs()     { return _ext_dirs;  }
   static char* get_appclasspath() { return _java_class_path->value(); }
+  static char* get_appmodulepath() { return _java_module_path->value(); }
   static void  fix_appclasspath();
 
   static char* get_default_shared_archive_path() NOT_CDS_RETURN_(NULL);

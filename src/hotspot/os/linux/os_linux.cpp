@@ -5882,9 +5882,18 @@ static void do_classpaths(void (*fn)(FdsInfo*, char*), FdsInfo *fds, char* class
     *n = ':';
     cp = n + 1;
   }
-  mark_classpath_entry(fds, cp);
+  fn(fds, cp);
 }
 
+static int stat_for_link(char *dirpath, char *name, struct stat *st) {
+  char resolved[PATH_MAX];
+  char buffer[PATH_MAX];
+  jio_snprintf(buffer, PATH_MAX, "%s/%s", dirpath, name);
+  char* rp = os::Posix::realpath(buffer, resolved, PATH_MAX);
+  //printf("--> resolved path: %s\n", rp);
+
+  return stat(rp, st);
+}
 
 static void mark_all_in(FdsInfo *fds, char* dirpath) {
   DIR *dir = os::opendir(dirpath);
@@ -5894,18 +5903,38 @@ static void mark_all_in(FdsInfo *fds, char* dirpath) {
 
   struct dirent* dent;
   while ((dent = os::readdir(dir))) {
+    __ino64_t d_ino = dent->d_ino;
+    if (dent->d_type == DT_LNK) {
+      struct stat st;
+      stat_for_link(dirpath, dent->d_name, &st);
+      //printf("--> link dent->d_ino:%lu st.st_ino:%lu\n", d_ino, st.st_ino);
+      d_ino = st.st_ino;
+    }
+
     for (int i = 0; i < fds->len(); ++i) {
       if (fds->get_state(i) != FdsInfo::ROOT) {
         continue;
       }
       struct stat* fstat = fds->get_stat(i);
-      if (dent->d_ino == fstat->st_ino) {
+      //printf("--> i: %d d_ino:%lu fstat->st_ino:%lu\n", i, d_ino, fstat->st_ino);
+      if (d_ino == fstat->st_ino) {
         fds->mark(i, FdsInfo::M_CLASSPATH);
       }
     }
   }
 
   os::closedir(dir);
+}
+
+static void mark_classpath_or_dir(FdsInfo *fds, char* cp) {
+  DIR *dir = os::opendir(cp);
+  if (!dir) {
+    mark_classpath_entry(fds, cp);
+    return;
+  }
+  os::closedir(dir);
+
+  mark_all_in(fds, cp);
 }
 
 static void mark_persistent(FdsInfo *fds) {
@@ -6191,6 +6220,7 @@ void VM_Crac::doit() {
   FdsInfo fds;
   do_classpaths(mark_classpath_entry, &fds, Arguments::get_sysclasspath());
   do_classpaths(mark_classpath_entry, &fds, Arguments::get_appclasspath());
+  do_classpaths(mark_classpath_or_dir, &fds, Arguments::get_appmodulepath());
   do_classpaths(mark_all_in, &fds, Arguments::get_ext_dirs());
   mark_persistent(&fds);
 
@@ -6241,6 +6271,8 @@ void VM_Crac::doit() {
       details = sock_details(details, detailsbuf, sizeof(detailsbuf));
       print_resources(" details2=\"%s\" ", details);
     }
+
+    //printf("--> BAD: fstat->st_ino:%lu\n", st->st_ino);
 
     print_resources("BAD: opened by application\n");
     ok = false;
